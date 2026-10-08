@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  username      String   @unique
+  email         String   @unique
+  password_hash String
+  created_at    DateTime @default(now())
+
+  // Связи
+  lots_created  Lot[]    @relation("SellerLots")
+  lots_won      Lot[]    @relation("WinnerLots")
+  bids          Bid[]
+}
+
+model Category {
+  id    String @id @default(uuid())
+  name  String @unique // Например: "Электроника", "Авто", "Искусство"
+  lots  Lot[]
+}
+
+model Image {
+  id     String @id @default(uuid())
+  url    String // Путь к файлу картинки на сервере или внешняя ссылка
+  lot_id String
+  
+  lot    Lot    @relation(fields: [lot_id], references: [id])
+}
+
+model Lot {
+  id             String   @id @default(uuid())
+  seller_id      String
+  category_id    String
+  title          String
+  description    String
+  starting_price Int      // Храним в копейках/центах
+  current_price  Int      // Для быстрого отображения и Socket.io бродкастов
+  min_step       Int      // Для строгой валидации: новая ставка >= current_price + min_step
+  end_time       DateTime // Для динамического таймера на React и автоматического закрытия на бэкенде
+  status         String   @default("active") // active, completed, canceled
+  winner_id      String?  // Фиксация победителя при закрытии торгов
+  version        Int      @default(1) // Важнейшее поле для валидации конкурентных ставок в реальном времени
+
+  // Связи
+  seller         User     @relation("SellerLots", fields: [seller_id], references: [id])
+  winner         User?    @relation("WinnerLots", fields: [winner_id], references: [id])
+  category       Category @relation(fields: [category_id], references: [id])
+  images         Image[]  // Массив картинок для галереи лота
+  bids           Bid[]
+}
+
+model Bid {
+  id         String   @id @default(uuid())
+  lot_id     String
+  user_id    String
+  amount     Int
+  created_at DateTime @default(now())
+
+  lot        Lot      @relation(fields: [lot_id], references: [id])
+  user       User     @relation(fields: [user_id], references: [id])
+
+  // Индекс для мгновенной выборки истории ставок
+  @@index([lot_id, created_at])
+}
