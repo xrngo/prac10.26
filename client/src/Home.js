@@ -13,8 +13,8 @@ function Home() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('token'); // Удаляем токен
-    navigate('/login'); // Перекидываем на авторизацию
+    localStorage.removeItem('token');
+    navigate('/login'); 
   };
 
   return (
@@ -26,7 +26,7 @@ function Home() {
       
       <h2>Доступные лоты:</h2>
       <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-        {lots.length === 0 ? <p>Загрузка лотов...</p> : null}
+        {lots.length === 0 ? <p>Загрузка лотов</p> : null}
         {lots.map(lot => (
           <div key={lot.id} style={{ border: '1px solid #ccc', padding: '15px', borderRadius: '8px', width: '250px' }}>
             <h3>{lot.title}</h3>

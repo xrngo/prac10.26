@@ -23,8 +23,8 @@ function Auth({ isLoginMode }) {
       
       if (response.ok) {
         if (isLoginMode) {
-          localStorage.setItem('token', data.token); // Сохраняем "пропуск"
-          navigate('/'); // Перекидываем на закрытую главную страницу
+          localStorage.setItem('token', data.token);
+          navigate('/');
         } else {
           alert('Регистрация успешна! Теперь войдите.');
           navigate('/login');

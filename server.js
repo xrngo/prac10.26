@@ -82,7 +82,7 @@ app.post('/api/register', async (req, res) => {
             }
         });
         
-        res.json({ message: "Пользователь успешно зарегистрирован!" });
+        res.json({ message: "Пользователь успешно зарегистрирован" });
     } catch (error) {
         res.status(400).json({ error: "Ошибка: возможно, такой email или имя уже заняты" });
     }

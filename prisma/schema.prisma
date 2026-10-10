@@ -14,7 +14,7 @@ model User {
   password_hash String
   created_at    DateTime @default(now())
 
-  // Связи
+  // связи
   lots_created  Lot[]    @relation("SellerLots")
   lots_won      Lot[]    @relation("WinnerLots")
   bids          Bid[]
@@ -22,13 +22,13 @@ model User {
 
 model Category {
   id    String @id @default(uuid())
-  name  String @unique // Например: "Электроника", "Авто", "Искусство"
+  name  String @unique 
   lots  Lot[]
 }
 
 model Image {
   id     String @id @default(uuid())
-  url    String // Путь к файлу картинки на сервере или внешняя ссылка
+  url    String 
   lot_id String
   
   lot    Lot    @relation(fields: [lot_id], references: [id])
@@ -40,19 +40,19 @@ model Lot {
   category_id    String
   title          String
   description    String
-  starting_price Int      // Храним в копейках/центах
-  current_price  Int      // Для быстрого отображения и Socket.io бродкастов
-  min_step       Int      // Для строгой валидации: новая ставка >= current_price + min_step
-  end_time       DateTime // Для динамического таймера на React и автоматического закрытия на бэкенде
-  status         String   @default("active") // active, completed, canceled
-  winner_id      String?  // Фиксация победителя при закрытии торгов
-  version        Int      @default(1) // Важнейшее поле для валидации конкурентных ставок в реальном времени
+  starting_price Int    
+  current_price  Int     
+  min_step       Int      
+  end_time       DateTime
+  status         String   @default("active")
+  winner_id      String?  
+  version        Int      @default(1) 
 
-  // Связи
+  // серверевязи
   seller         User     @relation("SellerLots", fields: [seller_id], references: [id])
   winner         User?    @relation("WinnerLots", fields: [winner_id], references: [id])
   category       Category @relation(fields: [category_id], references: [id])
-  images         Image[]  // Массив картинок для галереи лота
+  images         Image[]  
   bids           Bid[]
 }
 
@@ -66,6 +66,6 @@ model Bid {
   lot        Lot      @relation(fields: [lot_id], references: [id])
   user       User     @relation(fields: [user_id], references: [id])
 
-  // Индекс для мгновенной выборки истории ставок
+  // индекс для мгновенной выборки истории ставок
   @@index([lot_id, created_at])
 }

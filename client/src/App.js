@@ -8,7 +8,7 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Защищенная страница (аналог @login_required) */}
+        {/* (аналог @login_required) */}
         <Route 
           path="/" 
           element={
@@ -18,11 +18,11 @@ function App() {
           } 
         />
         
-        {/* Открытые страницы */}
+        {/* открытые страницы */}
         <Route path="/login" element={<Auth isLoginMode={true} />} />
         <Route path="/register" element={<Auth isLoginMode={false} />} />
         
-        {/* Обработка несуществующих ссылок */}
+        {/* обработка несуществующих ссылок */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
