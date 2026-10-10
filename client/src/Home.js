@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 function Home() {
   const [lots, setLots] = useState([]);
@@ -17,18 +17,21 @@ function Home() {
     navigate('/login'); 
   };
 
-  return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+return (
+    <div className="container">
+      <div className="header">
         <h1>Аукцион: Каталог</h1>
-        <button onClick={handleLogout} style={{ padding: '8px', cursor: 'pointer' }}>Выйти</button>
+        <div className="header-actions">
+          <Link to="/create" className="link-text">+ Добавить лот</Link>
+          <button onClick={handleLogout} className="btn btn-outline">Выйти</button>
+        </div>
       </div>
       
       <h2>Доступные лоты:</h2>
-      <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-        {lots.length === 0 ? <p>Загрузка лотов</p> : null}
+      <div className="lots-grid">
+        {lots.length === 0 ? <p>Загрузка лотов...</p> : null}
         {lots.map(lot => (
-          <div key={lot.id} style={{ border: '1px solid #ccc', padding: '15px', borderRadius: '8px', width: '250px' }}>
+          <div key={lot.id} className="card">
             <h3>{lot.title}</h3>
             <p>{lot.description}</p>
             <p><strong>Текущая ставка:</strong> {lot.current_price} руб.</p>

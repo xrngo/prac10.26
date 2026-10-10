@@ -38,26 +38,26 @@ function Auth({ isLoginMode }) {
   };
 
   return (
-    <div style={{ padding: '20px', maxWidth: '300px', margin: '50px auto', border: '1px solid #ccc', borderRadius: '8px' }}>
+    <div className="form-container">
       <h2>{isLoginMode ? 'Вход' : 'Регистрация'}</h2>
       
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <form onSubmit={handleSubmit} className="form-column">
         {!isLoginMode && (
-          <input type="text" placeholder="Имя пользователя" value={username} onChange={e => setUsername(e.target.value)} required />
+          <input type="text" placeholder="Имя пользователя" value={username} onChange={e => setUsername(e.target.value)} required className="form-input" />
         )}
-        <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required />
-        <input type="password" placeholder="Пароль" value={password} onChange={e => setPassword(e.target.value)} required />
+        <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required className="form-input" />
+        <input type="password" placeholder="Пароль" value={password} onChange={e => setPassword(e.target.value)} required className="form-input" />
         
-        <button type="submit" style={{ padding: '8px', cursor: 'pointer' }}>
+        <button type="submit" className="btn btn-primary">
           {isLoginMode ? 'Войти' : 'Зарегистрироваться'}
         </button>
       </form>
 
-      <div style={{ marginTop: '15px', textAlign: 'center' }}>
+      <div className="text-center">
         {isLoginMode ? (
-          <Link to="/register">Нет аккаунта? Зарегистрируйтесь</Link>
+          <Link to="/register" className="link-text">Нет аккаунта? Зарегистрируйтесь</Link>
         ) : (
-          <Link to="/login">Уже есть аккаунт? Войти</Link>
+          <Link to="/login" className="link-text">Уже есть аккаунт? Войти</Link>
         )}
       </div>
     </div>

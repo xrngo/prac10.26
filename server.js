@@ -24,20 +24,22 @@ app.get('/api/categories', async (req, res) => {
         res.status(500).json({ error: "Ошибка при получении категорий" });
     }
 });
+// Получение списка всех лотов для главной страницы
 app.get('/api/lots', async (req, res) => {
     try {
         const lots = await prisma.lot.findMany({
+            // Выбираем только активные лоты, если это нужно
+            where: { status: 'active' }, 
+            // Сортировка или дополнительные данные (по желанию)
             include: {
                 category: true,
-                seller: { 
-                    select: { username: true }
-                }
+                seller: { select: { username: true } }
             }
         });
         res.json(lots);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Ошибка при получении лотов" });
+        console.error("Ошибка при загрузке лотов:", error);
+        res.status(500).json({ error: "Ошибка сервера при загрузке лотов" });
     }
 });
 app.get('/api/lots/:id', async (req, res) => {
