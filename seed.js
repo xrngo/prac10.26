@@ -13,8 +13,6 @@ async function main() {
     console.log('Создаем новые тестовые данные...');
 
     const catElectronics = await prisma.category.create({ data: { name: 'Электроника' } });
-    const catAuto = await prisma.category.create({ data: { name: 'Автомобили' } });
-
     const testUser = await prisma.user.create({
         data: {
             username: 'Иван продавец',
@@ -23,7 +21,7 @@ async function main() {
         }
     });
 
-    // тест лот
+    // тест лотs
     await prisma.lot.create({
         data: {
             title: 'Игровой монитор 300 Гц',
