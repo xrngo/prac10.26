@@ -4,6 +4,7 @@ import Home from './Home';
 import Auth from './Auth';
 import CreateLot from './CreateLot';
 import ProtectedRoute from './ProtectedRoute';
+import UserProfile from './UserProfile';
 
 function App() {
   return (
@@ -12,6 +13,8 @@ function App() {
         <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
         <Route path="/create-lot" element={<ProtectedRoute><CreateLot /></ProtectedRoute>} />
         <Route path="/login" element={<Auth isLoginMode={true} />} />
+        
+        <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
         <Route path="/register" element={<Auth isLoginMode={false} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
