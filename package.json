@@ -12,10 +12,10 @@
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
-    "@prisma/client": "^5.22.0",
-    "prisma": "^5.22.0"
+    "prisma": "^8.0.0-rc.21"
   },
   "dependencies": {
+    "@prisma/client": "^5.22.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^18.0.6",
