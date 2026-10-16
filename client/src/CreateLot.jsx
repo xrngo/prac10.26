@@ -15,6 +15,12 @@ function CreateLot() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // Image Upload and Gallery State
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [filePreviews, setFilePreviews] = useState([]);
+  const [imageUrlInput, setImageUrlInput] = useState('');
+  const [manualImageUrls, setManualImageUrls] = useState([]);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -34,6 +40,34 @@ function CreateLot() {
       })
       .finally(() => setIsLoadingCategories(false));
   }, []);
+
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    setSelectedFiles(prev => [...prev, ...files]);
+
+    const newPreviews = files.map(file => URL.createObjectURL(file));
+    setFilePreviews(prev => [...prev, ...newPreviews]);
+  };
+
+  const handleRemoveFile = (index) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    setFilePreviews(prev => {
+      URL.revokeObjectURL(prev[index]);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const handleAddImageUrl = () => {
+    if (!imageUrlInput.trim()) return;
+    setManualImageUrls(prev => [...prev, imageUrlInput.trim()]);
+    setImageUrlInput('');
+  };
+
+  const handleRemoveManualUrl = (index) => {
+    setManualImageUrls(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -92,11 +126,37 @@ function CreateLot() {
     setIsSubmitting(true);
 
     try {
+      let uploadedUrls = [];
+
+      if (selectedFiles.length > 0) {
+        const formData = new FormData();
+        selectedFiles.forEach(file => {
+          formData.append('images', file);
+        });
+
+        const uploadRes = await fetch('http://localhost:5000/api/upload', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          body: formData
+        });
+
+        if (!uploadRes.ok) {
+          const errData = await uploadRes.json();
+          throw new Error(errData.error || 'Ошибка при загрузке изображений');
+        }
+
+        const uploadData = await uploadRes.json();
+        uploadedUrls = uploadData.urls || [];
+      }
+      const allImageUrls = [...uploadedUrls, ...manualImageUrls];
+
       const response = await fetch('http://localhost:5000/api/lots', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
           title: title.trim(),
@@ -104,7 +164,8 @@ function CreateLot() {
           category_id: categoryId,
           starting_price: price,
           min_step: step,
-          end_time: endTimeISO
+          end_time: endTimeISO,
+          images: allImageUrls
         })
       });
 
@@ -113,7 +174,7 @@ function CreateLot() {
       if (response.ok) {
         setSuccess('Лот успешно создан и опубликован!');
         setTimeout(() => {
-          navigate('/');
+          navigate(`/lot/${data.id || ''}`);
         }, 1200);
       } else {
         if (response.status === 401 || response.status === 403) {
@@ -125,24 +186,18 @@ function CreateLot() {
       }
     } catch (err) {
       console.error(err);
-      setError('Ошибка соединения с сервером');
+      setError(err.message || 'Ошибка соединения с сервером');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div style={{ maxWidth: '640px', margin: '30px auto', padding: '24px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{ maxWidth: '680px', margin: '30px auto', padding: '24px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <div style={{ marginBottom: '20px' }}>
-        <Link to="/" style={{ color: '#0066cc', textDecoration: 'none', fontSize: '14px' }}>
-          ← Вернуться в каталог лотов
-        </Link>
-        <h1 style={{ marginTop: '10px', fontSize: '26px', color: '#111' }}>
-          Создание нового аукционного лота
-        </h1>
-        <p style={{ color: '#666', fontSize: '14px', margin: '4px 0 0 0' }}>
-          Заполните данные о предмете для запуска открытых онлайн-торгов.
-        </p>
+        <Link to="/" style={{ color: '#0066cc', textDecoration: 'none', fontSize: '14px' }}>←Вернуться в каталог лотов</Link>
+        <h1 style={{ marginTop: '10px', fontSize: '26px', color: '#111' }}>Создание нового аукционного лота</h1>
+        <p style={{ color: '#666', fontSize: '14px', margin: '4px 0 0 0' }}>Заполните данные о предмете, загрузите фотографии для галереи и запустите открытые торги</p>
       </div>
 
       {error && (
@@ -181,19 +236,12 @@ function CreateLot() {
         boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
         display: 'flex',
         flexDirection: 'column',
-        gap: '18px'
+        gap: '20px'
       }}>
-        {/* Название */}
+        {/* Название */}  
         <div>
-          <label style={{ display: 'block', fontWeight: '600', marginBottom: '6px', fontSize: '14px' }}>
-            Название лота *
-          </label>
-          <input
-            type="text"
-            placeholder="Например: Игровой ноутбук ASUS ROG 16GB"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
+          <label style={{ display: 'block', fontWeight: '600', marginBottom: '6px', fontSize: '14px' }}>Название лота </label>
+          <input type="text" placeholder="Например: Игровой ноутбук ASUS ROG 16GB" value={title} onChange={(e) => setTitle(e.target.value)} required
             style={{
               width: '100%',
               padding: '10px 12px',
@@ -201,23 +249,14 @@ function CreateLot() {
               borderRadius: '6px',
               fontSize: '15px',
               boxSizing: 'border-box'
-            }}
-          />
+            }}/>
         </div>
 
         {/* Категория */}
         <div>
-          <label style={{ display: 'block', fontWeight: '600', marginBottom: '6px', fontSize: '14px' }}>
-            Категория *
-          </label>
-          {isLoadingCategories ? (
-            <p style={{ color: '#666', fontSize: '14px' }}>Загрузка категорий...</p>
-          ) : (
-            <select
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              required
-              style={{
+          <label style={{ display: 'block', fontWeight: '600', marginBottom: '6px', fontSize: '14px' }}>Категория</label>
+          {isLoadingCategories ? (<p style={{ color: '#666', fontSize: '14px' }}>Загрузка категорий...</p>) : (<select
+              value={categoryId} onChange={(e) => setCategoryId(e.target.value)}required style={{
                 width: '100%',
                 padding: '10px 12px',
                 border: '1px solid #cbd5e1',
@@ -225,14 +264,95 @@ function CreateLot() {
                 fontSize: '15px',
                 backgroundColor: '#fff',
                 boxSizing: 'border-box'
-              }}
-            >
+              }}>
               {categories.map((cat) => (
                 <option key={cat.id} value={cat.id}>
                   {cat.name}
                 </option>
               ))}
             </select>
+          )}
+        </div>
+
+        {/* Фотографии и галерея */}
+        <div style={{ backgroundColor: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+          <label style={{ display: 'block', fontWeight: '600', marginBottom: '4px', fontSize: '14px' }}>Галерея фотографий лота</label>
+          <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 12px 0' }}>Загрузите файлы с компьютера или укажите ссылки на изображения</p>
+          <input
+            type="file"
+            multiple
+            accept="image/*"
+            onChange={handleFileChange}
+            style={{
+              display: 'block',
+              width: '100%',
+              fontSize: '14px',
+              color: '#475569',
+              marginBottom: '12px'
+            }}/>
+          {/* Превью выбранных файлов */}
+          {filePreviews.length > 0 && (
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '14px' }}>
+              {filePreviews.map((previewUrl, idx) => (
+                <div key={idx} style={{ position: 'relative', width: '80px', height: '80px', borderRadius: '6px', overflow: 'hidden', border: '1px solid #cbd5e1' }}>
+                  <img src={previewUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <button type="button" onClick={() => handleRemoveFile(idx)}
+                    style={{
+                      position: 'absolute',
+                      top: '2px',
+                      right: '2px',
+                      background: 'rgba(0,0,0,0.6)',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '20px',
+                      height: '20px',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Добавление по URL */}
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <input type="url" placeholder="Или вставьте ссылку на изображение (https://...)" value={imageUrlInput} onChange={e => setImageUrlInput(e.target.value)}
+              style={{
+                flex: 1,
+                padding: '8px 12px',
+                border: '1px solid #cbd5e1',
+                borderRadius: '6px',
+                fontSize: '14px'
+              }}
+            />
+            <button type="button" onClick={handleAddImageUrl}
+              style={{
+                padding: '8px 14px',
+                backgroundColor: '#f1f5f9',
+                color: '#334155',
+                border: '1px solid #cbd5e1',
+                borderRadius: '6px',
+                fontSize: '13px',
+                cursor: 'pointer',
+                fontWeight: '500'
+              }}>Добавить ссылку</button>
+          </div>
+
+          {manualImageUrls.length > 0 && (
+            <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {manualImageUrls.map((url, idx) => (
+                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', padding: '4px 8px', borderRadius: '4px', border: '1px solid #e2e8f0', fontSize: '12px' }}>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '85%' }}>{url}</span>
+                  <button type="button" onClick={() => handleRemoveManualUrl(idx)} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer' }}>Удалить</button>
+                </div>
+              ))}
+            </div>
           )}
         </div>
 
@@ -290,10 +410,10 @@ function CreateLot() {
           </label>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
             {[
+              { label: '1 мин', value: '0.000694' },
               { label: '1 день', value: '1' },
               { label: '3 дня', value: '3' },
               { label: '7 дней', value: '7' },
-              { label: '14 дней', value: '14' },
               { label: 'Указать дату', value: 'custom' },
             ].map((item) => (
               <button
@@ -303,10 +423,10 @@ function CreateLot() {
                 style={{
                   padding: '7px 14px',
                   borderRadius: '6px',
-                  border: durationPreset === item.value ? '2px solid #0284c7' : '1px solid #cbd5e1',
-                  background: durationPreset === item.value ? '#e0f2fe' : '#fff',
-                  color: durationPreset === item.value ? '#0369a1' : '#334155',
-                  fontWeight: durationPreset === item.value ? '600' : '400',
+                  border: durationPreset === item.value ? '1px solid #0f172a' : '1px solid #cbd5e1',
+                  background: durationPreset === item.value ? '#0f172a' : '#fff',
+                  color: durationPreset === item.value ? '#fff' : '#334155',
+                  fontWeight: '500',
                   cursor: 'pointer',
                   fontSize: '13px'
                 }}
@@ -365,12 +485,12 @@ function CreateLot() {
             style={{
               flex: 1,
               padding: '12px 20px',
-              backgroundColor: isSubmitting ? '#94a3b8' : '#0284c7',
+              backgroundColor: isSubmitting ? '#94a3b8' : '#0f172a',
               color: '#fff',
               border: 'none',
               borderRadius: '6px',
-              fontSize: '16px',
-              fontWeight: '600',
+              fontSize: '15px',
+              fontWeight: '500',
               cursor: isSubmitting ? 'not-allowed' : 'pointer',
               transition: 'background 0.2s'
             }}

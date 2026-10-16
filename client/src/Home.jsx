@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import socket from './socket';
 
 function Home() {
   const [lots, setLots] = useState([]);
@@ -7,14 +8,9 @@ function Home() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  
-  const [selectedLot, setSelectedLot] = useState(null);
-  const [bidAmount, setBidAmount] = useState('');
-  const [bidError, setBidError] = useState('');
-  const [bidSuccess, setBidSuccess] = useState('');
+  const [isLiveConnected, setIsLiveConnected] = useState(socket.connected);
 
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
 
   const fetchLots = () => {
     fetch('http://localhost:5000/api/lots')
@@ -33,58 +29,73 @@ function Home() {
         if (Array.isArray(data)) setCategories(data);
       })
       .catch(err => console.error('Ошибка загрузки категорий:', err));
+
+    // Socket.io Real-time event listeners
+    const handleConnect = () => setIsLiveConnected(true);
+    const handleDisconnect = () => setIsLiveConnected(false);
+
+    const handleBidPlaced = (data) => {
+      setLots(prevLots =>
+        prevLots.map(l => {
+          if (l.id === data.lot_id) {
+            const updatedBids = [data.bid, ...(l.bids || [])].filter(
+              (b, idx, self) => idx === self.findIndex(t => t.id === b.id)
+            );
+            return {
+              ...l,
+              current_price: data.current_price,
+              bids: updatedBids,
+              ...(data.lot ? data.lot : {})
+            };
+          }
+          return l;
+        })
+      );
+    };
+
+    const handleLotEnded = (data) => {
+      setLots(prevLots =>
+        prevLots.map(l => {
+          if (l.id === data.lot_id) {
+            return {
+              ...l,
+              status: 'completed',
+              winner: data.winner,
+              ...(data.lot ? data.lot : {})
+            };
+          }
+          return l;
+        })
+      );
+    };
+
+    const handleLotCreated = (newLot) => {
+      setLots(prevLots => {
+        if (prevLots.some(l => l.id === newLot.id)) return prevLots;
+        return [newLot, ...prevLots];
+      });
+    };
+
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
+    socket.on('bid_placed', handleBidPlaced);
+    socket.on('bid_update', handleBidPlaced);
+    socket.on('lot_ended', handleLotEnded);
+    socket.on('lot_created', handleLotCreated);
+
+    return () => {
+      socket.off('connect', handleConnect);
+      socket.off('disconnect', handleDisconnect);
+      socket.off('bid_placed', handleBidPlaced);
+      socket.off('bid_update', handleBidPlaced);
+      socket.off('lot_ended', handleLotEnded);
+      socket.off('lot_created', handleLotCreated);
+    };
   }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     navigate('/login'); 
-  };
-
-  const handlePlaceBid = (e) => {
-    e.preventDefault();
-    setBidError('');
-    setBidSuccess('');
-
-    const minRequired = (selectedLot.current_price || 0) + (selectedLot.min_step || 0);
-    const numericAmount = Number(bidAmount);
-
-    if (numericAmount < minRequired) {
-      setBidError(`Ставка должна быть не менее ${minRequired.toLocaleString('ru-RU')} ₽`);
-      return;
-    }
-
-    fetch(`http://localhost:5000/api/lots/${selectedLot.id}/bids`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ amount: numericAmount })
-    })
-    .then(async res => {
-      const text = await res.text();
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch {
-        data = { message: text };
-      }
-
-      if (!res.ok) throw new Error(data.error || data.message || 'Ошибка при ставке');
-      return data;
-    })
-    .then(() => {
-      setBidSuccess('Ставка успешно принята!');
-      setBidAmount('');
-      fetchLots(); 
-      setTimeout(() => {
-        setSelectedLot(null);
-        setBidSuccess('');
-      }, 1500);
-    })
-    .catch(err => {
-      setBidError(err.message || 'Не удалось сделать ставку');
-    });
   };
 
   const filteredLots = lots.filter(lot => {
@@ -95,7 +106,8 @@ function Home() {
     return matchesCategory && matchesSearch;
   });
 
-  const formatRemainingTime = (endTime) => {
+  const formatRemainingTime = (endTime, status) => {
+    if (status === 'completed') return 'Торги завершены';
     if (!endTime) return 'Не указано';
     const total = new Date(endTime).getTime() - Date.now();
     if (total <= 0) return 'Торги завершены';
@@ -119,9 +131,25 @@ function Home() {
         gap: '12px'
       }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '28px', color: '#0f172a' }}>Аукцион: Каталог</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <h1 style={{ margin: 0, fontSize: '28px', color: '#0f172a' }}>Аукцион: Каталог</h1>
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '3px 8px',
+              backgroundColor: isLiveConnected ? '#dcfce7' : '#fef3c7',
+              color: isLiveConnected ? '#15803d' : '#b45309',
+              borderRadius: '12px',
+              fontSize: '11px',
+              fontWeight: '600'
+            }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: isLiveConnected ? '#22c55e' : '#f59e0b' }} />
+              {isLiveConnected ? 'Live' : 'Подключение'}
+            </span>
+          </div>
           <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '14px' }}>
-            Платформа для проведения открытых онлайн-торгов
+            Платформа для проведения открытых онлайн-торгов в реальном времени
           </p>
         </div>
         
@@ -147,17 +175,15 @@ function Home() {
           <Link
             to="/create-lot"
             style={{
-              padding: '10px 18px',
-              backgroundColor: '#0284c7',
+              padding: '9px 16px',
+              backgroundColor: '#0f172a',
               color: '#fff',
               borderRadius: '6px',
               textDecoration: 'none',
-              fontWeight: '600',
+              fontWeight: '500',
               fontSize: '14px',
               display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+              alignItems: 'center'
             }}
           >
             + Добавить лот
@@ -167,7 +193,7 @@ function Home() {
             onClick={handleLogout}
             style={{
               padding: '9px 16px',
-              backgroundColor: '#f1f5f9',
+              backgroundColor: '#f8fafc',
               color: '#475569',
               border: '1px solid #cbd5e1',
               borderRadius: '6px',
@@ -197,7 +223,7 @@ function Home() {
         />
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', marginRight: '4px' }}>
+          <span style={{ fontSize: '13px', fontWeight: '500', color: '#64748b', marginRight: '4px' }}>
             Категория:
           </span>
           <button
@@ -205,11 +231,12 @@ function Home() {
             onClick={() => setSelectedCategory('all')}
             style={{
               padding: '6px 14px',
-              borderRadius: '20px',
-              border: selectedCategory === 'all' ? '1px solid #0284c7' : '1px solid #e2e8f0',
-              backgroundColor: selectedCategory === 'all' ? '#0284c7' : '#f8fafc',
+              borderRadius: '6px',
+              border: selectedCategory === 'all' ? '1px solid #0f172a' : '1px solid #e2e8f0',
+              backgroundColor: selectedCategory === 'all' ? '#0f172a' : '#f8fafc',
               color: selectedCategory === 'all' ? '#fff' : '#475569',
               fontSize: '13px',
+              fontWeight: '500',
               cursor: 'pointer'
             }}
           >
@@ -222,11 +249,12 @@ function Home() {
               onClick={() => setSelectedCategory(cat.id)}
               style={{
                 padding: '6px 14px',
-                borderRadius: '20px',
-                border: selectedCategory === cat.id ? '1px solid #0284c7' : '1px solid #e2e8f0',
-                backgroundColor: selectedCategory === cat.id ? '#0284c7' : '#f8fafc',
+                borderRadius: '6px',
+                border: selectedCategory === cat.id ? '1px solid #0f172a' : '1px solid #e2e8f0',
+                backgroundColor: selectedCategory === cat.id ? '#0f172a' : '#f8fafc',
                 color: selectedCategory === cat.id ? '#fff' : '#475569',
                 fontSize: '13px',
+                fontWeight: '500',
                 cursor: 'pointer'
               }}
             >
@@ -249,83 +277,109 @@ function Home() {
             <p style={{ color: '#64748b', fontSize: '16px', margin: '0 0 16px 0' }}>В этой категории пока нет лотов</p>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
             {filteredLots.map(lot => {
               const categoryName = lot.category ? lot.category.name : 'Категория';
               const sellerName = lot.seller ? lot.seller.username : 'Продавец';
-              const remainingTime = formatRemainingTime(lot.end_time);
-              const isActive = lot.status === 'active';
+              const remainingTime = formatRemainingTime(lot.end_time, lot.status);
+              const isActive = lot.status === 'active' && new Date(lot.end_time).getTime() > Date.now();
 
-              // Определяем лидера по ставкам
+              // Лидер по ставкам
               const topBid = lot.bids && lot.bids.length > 0 ? lot.bids[0] : null;
               const leaderName = topBid && topBid.user ? topBid.user.username : 'Нет ставок';
+
+              const mainImage = lot.images && lot.images.length > 0 ? lot.images[0].url : null;
+              const imagesCount = lot.images ? lot.images.length : 0;
 
               return (
                 <div
                   key={lot.id}
-                  onClick={() => isActive && setSelectedLot(lot)}
+                  onClick={() => navigate(`/lot/${lot.id}`)}
                   style={{
                     backgroundColor: '#fff',
                     border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    padding: '20px',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.04)',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
-                    cursor: isActive ? 'pointer' : 'default',
-                    transition: 'all 0.2s'
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    userSelect: 'none'
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.transform = 'translateY(-3px)';
+                    e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.08)';
+                    e.currentTarget.style.borderColor = '#38bdf8';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 2px 5px rgba(0,0,0,0.04)';
+                    e.currentTarget.style.borderColor = '#e2e8f0';
                   }}
                 >
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: '600', color: '#0369a1', backgroundColor: '#e0f2fe', padding: '3px 8px', borderRadius: '4px' }}>
-                        {categoryName}
-                      </span>
-                      <span style={{ fontSize: '11px', color: isActive ? '#15803d' : '#475569', backgroundColor: isActive ? '#dcfce7' : '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontWeight: '600' }}>
-                        {isActive ? 'Активен' : lot.status}
-                      </span>
-                    </div>
-
-                    <h3 style={{ margin: '8px 0', fontSize: '18px', color: '#0f172a' }}>{lot.title}</h3>
-                    <p style={{ color: '#475569', fontSize: '14px', lineHeight: '1.4', margin: '0 0 16px 0', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                      {lot.description}
-                    </p>
-                  </div>
-
-                  <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                      <span style={{ fontSize: '12px', color: '#64748b' }}>Текущая ставка:</span>
-                      <strong style={{ fontSize: '18px', color: '#0284c7' }}>
-                        {lot.current_price?.toLocaleString('ru-RU')} ₽
-                      </strong>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b' }}>
-                      <span>Лидер:</span>
-                      <span style={{ fontWeight: '600', color: '#0f172a' }}>{leaderName}</span>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b' }}>
-                      <span>Шаг ставки:</span>
-                      <span style={{ fontWeight: '500', color: '#334155' }}>+{lot.min_step?.toLocaleString('ru-RU')} ₽</span>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b' }}>
-                      <span>До окончания:</span>
-                      <span style={{ fontWeight: '600', color: '#e11d48' }}>⏱ {remainingTime}</span>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                      <span>Продавец:</span>
-                      <span style={{ color: '#334155' }}>{sellerName}</span>
-                    </div>
-
-                    {isActive && (
-                      <div style={{ marginTop: '8px', textAlign: 'center', fontSize: '13px', color: '#0284c7', fontWeight: '600' }}>
-                        Сделать ставку →
+                  {/* Изображение лота */}
+                  <div style={{ position: 'relative', width: '100%', height: '190px', backgroundColor: '#f1f5f9' }}>
+                    {mainImage ? (
+                      <img src={mainImage} alt={lot.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '13px' }}>
+                        Нет фото
                       </div>
                     )}
+
+                    <div style={{ position: 'absolute', top: '10px', left: '10px', display: 'flex', gap: '6px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '500', color: '#fff', backgroundColor: 'rgba(15, 23, 42, 0.85)', padding: '3px 8px', borderRadius: '4px' }}>
+                        {categoryName}
+                      </span>
+                      {imagesCount > 1 && (
+                        <span style={{ fontSize: '11px', fontWeight: '500', color: '#fff', backgroundColor: 'rgba(15, 23, 42, 0.85)', padding: '3px 7px', borderRadius: '4px' }}>
+                          Фото: {imagesCount}
+                        </span>
+                      )}
+                    </div>
+
+                    <div style={{ position: 'absolute', top: '10px', right: '10px' }}>
+                      <span style={{ fontSize: '11px', color: isActive ? '#15803d' : '#64748b', backgroundColor: isActive ? '#f0fdf4' : '#f8fafc', border: '1px solid #e2e8f0', padding: '3px 8px', borderRadius: '4px', fontWeight: '600' }}>
+                        {isActive ? 'Активен' : 'Завершен'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
+                    <div>
+                      <h3 style={{ margin: '0 0 6px 0', fontSize: '17px', color: '#0f172a', lineHeight: '1.3' }}>
+                        {lot.title}
+                      </h3>
+                      <p style={{ color: '#475569', fontSize: '13px', lineHeight: '1.4', margin: '0 0 14px 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                        {lot.description}
+                      </p>
+                    </div>
+
+                    <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                        <span style={{ fontSize: '12px', color: '#64748b' }}>Текущая ставка:</span>
+                        <strong style={{ fontSize: '19px', color: '#0f172a' }}>
+                          {lot.current_price?.toLocaleString('ru-RU')} ₽
+                        </strong>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b' }}>
+                        <span>Лидер:</span>
+                        <span style={{ fontWeight: '600', color: '#0f172a' }}>{leaderName}</span>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b' }}>
+                        <span>До окончания:</span>
+                        <span style={{ fontWeight: '500', color: isActive ? '#0f172a' : '#64748b' }}>{remainingTime}</span>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b' }}>
+                        <span>Продавец:</span>
+                        <span style={{ color: '#334155' }}>{sellerName}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               );
@@ -333,68 +387,6 @@ function Home() {
           </div>
         )}
       </div>
-
-      {/* Модальное окно для ставки */}
-      {selectedLot && (() => {
-        const topBid = selectedLot.bids && selectedLot.bids.length > 0 ? selectedLot.bids[0] : null;
-        const currentLeader = topBid && topBid.user ? topBid.user.username : 'Нет ставок';
-
-        return (
-          <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '16px'
-          }}>
-            <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '10px', width: '100%', maxWidth: '450px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
-              <h3 style={{ margin: '0 0 8px 0', fontSize: '20px', color: '#0f172a' }}>Сделать ставку</h3>
-              <p style={{ margin: '0 0 16px 0', color: '#64748b', fontSize: '14px' }}>Лот: <strong>{selectedLot.title}</strong></p>
-
-              <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', marginBottom: '16px', fontSize: '14px', color: '#334155', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <div>Текущая цена: <strong>{selectedLot.current_price?.toLocaleString('ru-RU')} ₽</strong></div>
-                <div>Лидер по ставке: <strong style={{ color: '#0284c7' }}>{currentLeader}</strong></div>
-                <div>Минимальный шаг: <strong>+{selectedLot.min_step?.toLocaleString('ru-RU')} ₽</strong></div>
-                <div style={{ marginTop: '2px', color: '#0284c7' }}>
-                  Минимальная ставка: <strong>{((selectedLot.current_price || 0) + (selectedLot.min_step || 0)).toLocaleString('ru-RU')} ₽</strong>
-                </div>
-              </div>
-
-              {bidError && <div style={{ marginBottom: '12px', padding: '10px', backgroundColor: '#fee2e2', color: '#991b1b', borderRadius: '6px', fontSize: '13px' }}>{bidError}</div>}
-              {bidSuccess && <div style={{ marginBottom: '12px', padding: '10px', backgroundColor: '#dcfce7', color: '#166534', borderRadius: '6px', fontSize: '13px' }}>{bidSuccess}</div>}
-
-              <form onSubmit={handlePlaceBid}>
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '6px' }}>
-                    Ваша ставка (в рублях):
-                  </label>
-                  <input
-                    type="number"
-                    value={bidAmount}
-                    onChange={(e) => setBidAmount(e.target.value)}
-                    placeholder={`Например, ${(selectedLot.current_price || 0) + (selectedLot.min_step || 0)}`}
-                    required
-                    style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box' }}
-                  />
-                </div>
-
-                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                  <button
-                    type="button"
-                    onClick={() => { setSelectedLot(null); setBidError(''); setBidSuccess(''); }}
-                    style={{ padding: '9px 16px', backgroundColor: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}
-                  >
-                    Отмена
-                  </button>
-                  <button
-                    type="submit"
-                    style={{ padding: '9px 16px', backgroundColor: '#0284c7', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}
-                  >
-                    Подтвердить ставку
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        );
-      })()}
     </div>
   );
 }

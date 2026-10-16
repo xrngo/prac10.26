@@ -3,8 +3,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Home from './Home';
 import Auth from './Auth';
 import CreateLot from './CreateLot';
+import UserProfile from './UserProfile'; // 1. Импортируем компонент профиля
+import LotPage from './LotPage';
 import ProtectedRoute from './ProtectedRoute';
-import UserProfile from './UserProfile';
 
 function App() {
   return (
@@ -12,9 +13,11 @@ function App() {
       <Routes>
         <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
         <Route path="/create-lot" element={<ProtectedRoute><CreateLot /></ProtectedRoute>} />
-        <Route path="/login" element={<Auth isLoginMode={true} />} />
-        
+        <Route path="/lot/:id" element={<ProtectedRoute><LotPage /></ProtectedRoute>} />
+        <Route path="/lots/:id" element={<ProtectedRoute><LotPage /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+        
+        <Route path="/login" element={<Auth isLoginMode={true} />} />
         <Route path="/register" element={<Auth isLoginMode={false} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
