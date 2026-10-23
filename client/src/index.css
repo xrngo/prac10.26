@@ -119,3 +119,35 @@
   text-decoration: underline;
   color: #2563eb;
 }
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.back-btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background-color: #f1f5f9;
+  color: #0f172a;
+  transition: all 0.2s ease;
+}
+
+.back-btn:hover {
+  color: #0f172a;
+}
+
+.back-btn:hover .back-btn-icon {
+  background-color: #0f172a;
+  color: #ffffff;
+  transform: scale(1.05);
+}

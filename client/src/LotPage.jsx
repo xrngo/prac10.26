@@ -248,7 +248,8 @@ function LotPage() {
     return (
       <div style={{ maxWidth: '1000px', margin: '40px auto', padding: '24px', textAlign: 'center' }}>
         <h2 style={{ color: '#0f172a' }}>Лот не найден</h2>
-        <Link to="/" style={{ color: '#0284c7', textDecoration: 'none' }}>Вернуться в каталог</Link>
+        <Link to="/" className="back-btn"> <span className="back-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg></span>
+    </Link>
       </div>
     );
   }
@@ -271,27 +272,91 @@ function LotPage() {
   const topBid = lot.bids && lot.bids.length > 0 ? lot.bids[0] : null;
   const leaderName = topBid && topBid.user ? topBid.user.username : 'Ставок еще нет';
   const isLeader = currentUser && topBid && topBid.user && (topBid.user.id === currentUser.id || topBid.user.username === currentUser.username);
-
+  
   return (
     <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      <header
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                paddingBottom: '20px',
+                borderBottom: '1px solid #e2e8f0',
+                marginBottom: '28px',
+                flexWrap: 'wrap',
+                gap: '12px'
+              }}
+            >
+              <div>
+                <Link to="/"
+                  style={{ textDecoration: 'none', display: 'inline-block' }}
+                  title="Вернуться в каталог лотов"
+                >
+                  <h1
+                    style={{
+                      margin: 0,
+                      fontSize: '26px',
+                      color: '#0f172a',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px'
+                    }}>
+                      
+                    <span>Аукцион: лот</span>
+                    <span
+                      style={{
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        color: '#64748b',
+                        backgroundColor: '#f1f5f9',
+                        padding: '2px 8px',
+                        borderRadius: '4px'
+                      }}>
+                    </span>
+                    
+                  </h1>
+                </Link>
+                <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '3px 8px',
+              backgroundColor: isLiveConnected ? '#dcfce7' : '#fef3c7',
+              color: isLiveConnected ? '#15803d' : '#b45309',
+              borderRadius: '12px',
+              fontSize: '11px',
+              fontWeight: '600'
+            }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: isLiveConnected ? '#22c55e' : '#f59e0b' }} />
+              {isLiveConnected ? 'Live' : 'Подключение'}
+            </span>
+                
+                <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '14px' }}>
+                  Страница открытого товара
+                </p>
+              </div>
+      
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <Link
+                  to="/"
+                  style={{
+                    padding: '9px 16px',
+                    backgroundColor: '#f8fafc',
+                    color: '#334155',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '6px',
+                    textDecoration: 'none',
+                    fontWeight: '500',
+                    fontSize: '14px'
+                  }}
+                >
+                  Каталог лотов
+                </Link>
+              </div>
+            </header>
       {/* Верхняя навигация */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '10px' }}>
-        <Link to="/" style={{ color: '#0f172a', textDecoration: 'none', fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span>←</span>
-          <span>Каталог лотов</span>
-        </Link>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{
-            display: 'inline-block',
-            width: '7px',
-            height: '7px',
-            borderRadius: '50%',
-            backgroundColor: isLiveConnected ? '#15803d' : '#94a3b8'
-          }} />
-          <span style={{ fontSize: '12px', color: '#64748b' }}>
-            {isLiveConnected ? 'Синхронизация активна' : 'Подключение...'}
-          </span>
-        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1.15fr) minmax(320px, 1fr)', gap: '32px' }}>

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-
+import { useNavigate, Link } from 'react-router-dom'; 
 export default function UserProfile() {
   const [user, setUser] = useState(null);
   const [bids, setBids] = useState([]);
@@ -13,6 +12,7 @@ export default function UserProfile() {
   const [isUpdating, setIsUpdating] = useState(false);
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
+  
   
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -135,8 +135,8 @@ export default function UserProfile() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '10px'
-              }}
-            >
+              }}>
+                
               <span>Аукцион: Личный кабинет</span>
               <span
                 style={{
@@ -148,8 +148,10 @@ export default function UserProfile() {
                   borderRadius: '4px'
                 }}>
               </span>
+              
             </h1>
           </Link>
+  
           <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '14px' }}>
             Управление ставками, аукционами и личными данными
           </p>

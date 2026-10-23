@@ -188,21 +188,6 @@ function Home() {
           >
             + Добавить лот
           </Link>
-
-          <button
-            onClick={handleLogout}
-            style={{
-              padding: '9px 16px',
-              backgroundColor: '#f8fafc',
-              color: '#475569',
-              border: '1px solid #cbd5e1',
-              borderRadius: '6px',
-              fontSize: '14px',
-              cursor: 'pointer'
-            }}
-          >
-            Выйти
-          </button>
         </div>
       </header>
 
