@@ -10,7 +10,14 @@ cd client
 npm install
 ```
 
-## 2. Запуск Backend
+## 2. Prisma
+```bash
+npx prisma db pull
+```
+```bash
+npx prisma generate
+```
+## 3. Запуск Backend
 
 В первом терминале из корневой папки проекта выполни:
 
@@ -18,7 +25,7 @@ npm install
 node server.js
 ```
 
-## 3. Запуск Frontend
+## 4. Запуск Frontend
 
 Открой второй терминал и выполни:
 
