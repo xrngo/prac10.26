@@ -118,7 +118,7 @@ function CreateLot() {
       }
       endTimeISO = customDate.toISOString();
     } else {
-      const days = parseInt(durationPreset, 10) || 3;
+      const days = parseFloat(durationPreset) || 3;
       const targetDate = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
       endTimeISO = targetDate.toISOString();
     }

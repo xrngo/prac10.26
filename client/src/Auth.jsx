@@ -28,7 +28,7 @@ function Auth({ isLoginMode }) {
           navigate('/');
         } else {
           setStatusMessage({ text: 'Регистрация успешна! Теперь войдите.', isError: false });
-          navigate('/login');
+          setTimeout(() => navigate('/login'), 1500);
         }
       } else {
         setStatusMessage({ text: data.error || 'Произошла ошибка', isError: true });
@@ -39,40 +39,88 @@ function Auth({ isLoginMode }) {
   };
 
   return (
-    <div style={{ padding: '20px', maxWidth: '300px', margin: '50px auto', border: '1px solid #ccc', borderRadius: '8px' }}>
-      <h2>{isLoginMode ? 'Вход' : 'Регистрация'}</h2>
+    <div className="auth-container">
+      <div className="auth-card">
+        <h2 className="auth-title">
+          {isLoginMode ? 'Вход' : 'Регистрация'}
+        </h2>
 
-      {statusMessage.text && (
-        <div style={{
-          padding: '8px',
-          marginBottom: '10px',
-          borderRadius: '4px',
-          backgroundColor: statusMessage.isError ? '#ffebee' : '#e8f5e9',
-          color: statusMessage.isError ? '#c62828' : '#2e7d32',
-          fontSize: '14px'
-        }}>
-          {statusMessage.text}
-        </div>
-      )}
-      
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {!isLoginMode && (
-          <input type="text" placeholder="Имя пользователя" value={username} onChange={e => setUsername(e.target.value)} required />
+        {statusMessage.text && (
+          <div style={{
+            padding: '10px 12px',
+            marginBottom: '16px',
+            borderRadius: '8px',
+            backgroundColor: statusMessage.isError ? '#ffebee' : '#e8f5e9',
+            color: statusMessage.isError ? '#c62828' : '#2e7d32',
+            fontSize: '13px',
+            fontWeight: '500',
+            border: `1px solid ${statusMessage.isError ? '#ffcdd2' : '#c8e6c9'}`
+          }}>
+            {statusMessage.text}
+          </div>
         )}
-        <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required />
-        <input type="password" placeholder="Пароль" value={password} onChange={e => setPassword(e.target.value)} required />
         
-        <button type="submit" style={{ padding: '8px', cursor: 'pointer' }}>
-          {isLoginMode ? 'Войти' : 'Зарегистрироваться'}
-        </button>
-      </form>
+        <form className="auth-form" onSubmit={handleSubmit}>
+          {!isLoginMode && (
+            <div className="auth-field">
+              <label className="auth-label">Имя пользователя</label>
+              <input 
+                type="text" 
+                className="auth-input"
+                placeholder="Введите имя" 
+                value={username} 
+                onChange={e => setUsername(e.target.value)} 
+                required 
+              />
+            </div>
+          )}
 
-      <div style={{ marginTop: '15px', textAlign: 'center' }}>
-        {isLoginMode ? (
-          <Link to="/register">Нет аккаунта? Зарегистрируйтесь</Link>
-        ) : (
-          <Link to="/login">Уже есть аккаунт? Войти</Link>
-        )}
+          <div className="auth-field">
+            <label className="auth-label">Email</label>
+            <input 
+              type="email" 
+              className="auth-input"
+              placeholder="name@example.com" 
+              value={email} 
+              onChange={e => setEmail(e.target.value)} 
+              required 
+            />
+          </div>
+
+          <div className="auth-field">
+            <label className="auth-label">Пароль</label>
+            <input 
+              type="password" 
+              className="auth-input"
+              placeholder="••••••••" 
+              value={password} 
+              onChange={e => setPassword(e.target.value)} 
+              required 
+            />
+          </div>
+          
+          <button type="submit" className="auth-button">
+            {isLoginMode ? 'Войти' : 'Зарегистрироваться'}
+          </button>
+        </form>
+
+        <div className="auth-footer">
+          {isLoginMode ? (
+            <>
+              Нет аккаунта?{' '}
+              <Link to="/register" className="auth-link">
+                Зарегистрируйтесь
+              </Link>
+            </>
+          ) : (
+            <>
+              Уже есть аккаунт?{' '}
+              <Link to="/login" className="auth-link">
+                Войти
+              </Link>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

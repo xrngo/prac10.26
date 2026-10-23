@@ -91,7 +91,7 @@ async function finalizeLot(lotId) {
             lot: updatedLot
         });
         io.emit('lot_ended', {
-            lot_id: id,
+            lot_id: lot.id,
             status: 'completed',
             winner: updatedLot.winner,
             lot: updatedLot
@@ -385,7 +385,7 @@ app.post('/api/lots/:id/buyout', authenticateToken, async (req, res) => {
         });
 
         io.to(`lot_${id}`).emit('lot_ended', { lot_id: id, status: 'completed', winner: result.winner, lot: result });
-        io.emit('lot_ended', {lot_id: lotId, status: 'completed', winner: updatedLot.winner,lot: updatedLot });
+        io.emit('lot_ended', {lot_id: id, status: 'completed', winner: updatedLot.winner,lot: updatedLot });
 
         res.json({ message: "Лот выкуплен", lot: result });
     } catch (e) {

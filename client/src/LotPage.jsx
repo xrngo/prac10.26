@@ -112,6 +112,7 @@ function LotPage() {
       socket.off('lot_ended', handleLotEnded);
     };
   }, [id]);
+
   // eslint-disable-next-line
   useEffect(() => {
     if (!lot || !lot.end_time) return;
@@ -178,17 +179,19 @@ function LotPage() {
     }
   };
 
-  // Quick Bid (+500 ₽)
-  const handleQuickBid500 = () => {
+  // Quick Bid (+min_step ₽)
+  const handleQuickBid = () => {
     if (!lot) return;
-    const nextAmount = (lot.current_price || 0) + 500;
+    const step = Number(lot.min_step) || 500;
+    const nextAmount = (Number(lot.current_price) || 0) + step;
     submitBidAmount(nextAmount);
   };
 
   // Form custom bid
   const handleCustomBidSubmit = (e) => {
     e.preventDefault();
-    const minRequired = (lot.current_price || 0) + (lot.min_step || 0);
+    const step = Number(lot.min_step) || 500;
+    const minRequired = (Number(lot.current_price) || 0) + step;
     const numericAmount = parseInt(bidAmount, 10);
 
     if (isNaN(numericAmount) || numericAmount < minRequired) {
@@ -252,11 +255,11 @@ function LotPage() {
 
   const isSeller = currentUser && lot.seller && (currentUser.id === lot.seller_id || currentUser.id === lot.seller.id);
   const isActive = lot.status === 'active' && new Date(lot.end_time).getTime() > Date.now();
-  const minRequired = (lot.current_price || 0) + (lot.min_step || 0);
-  const quickBid500Price = (lot.current_price || 0) + 500;
+  const minStep = Number(lot.min_step) || 500;
+  const minRequired = (Number(lot.current_price) || 0) + minStep;
+  const quickBidPrice = minRequired;
 
   // Buyout price calculation
-  const minStep = lot.min_step || 500;
   const buyoutPrice = Math.max(
     Math.round(lot.starting_price * 1.5),
     (lot.current_price || lot.starting_price) + minStep * 2
@@ -418,7 +421,7 @@ function LotPage() {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#475569', marginBottom: '6px' }}>
               <span>Минимальный шаг:</span>
-              <span style={{ fontWeight: '500' }}>+{lot.min_step?.toLocaleString('ru-RU')} ₽</span>
+              <span style={{ fontWeight: '500' }}>+{minStep.toLocaleString('ru-RU')} ₽</span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#475569', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
@@ -467,11 +470,11 @@ function LotPage() {
                 </div>
               ) : (
                 <>
-                  {/* КНОПКА БЫСТРОЙ СТАВКИ (+500 ₽) В СПОКОЙНЫХ ТОНАХ */}
+                  {/* КНОПКА БЫСТРОЙ СТАВКИ В СПОКОЙНЫХ ТОНАХ */}
                   <div>
                     <button
                       type="button"
-                      onClick={handleQuickBid500}
+                      onClick={handleQuickBid}
                       disabled={isSubmitting || isBuyingOut}
                       style={{
                         width: '100%',
@@ -494,10 +497,10 @@ function LotPage() {
                     >
                       {isSubmitting
                         ? 'Отправка...'
-                        : `Быстрая ставка +500 ₽ (${quickBid500Price.toLocaleString('ru-RU')} ₽)`}
+                        : `Быстрая ставка +${minStep.toLocaleString('ru-RU')} ₽ (${quickBidPrice.toLocaleString('ru-RU')} ₽)`}
                     </button>
                     <p style={{ margin: '5px 0 0 0', textAlign: 'center', fontSize: '12px', color: '#64748b' }}>
-                      Повышение текущей ставки на 500 ₽
+                      Повышение текущей ставки на {minStep.toLocaleString('ru-RU')} ₽
                     </p>
                   </div>
 
